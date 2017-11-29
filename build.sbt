@@ -12,5 +12,27 @@ lazy val root = (project in file(".")).
       "scalaz-base" %% "scalaz-base" % "0.1-SNAPSHOT",
       "scalaz-effect" %% "scalaz-effect" % "0.1-SNAPSHOT",
       scalaTest % Test
+    ),
+    scalacOptions ++= Seq(
+      "-encoding", "UTF-8",
+      "-target:jvm-1.8",
+      "-Ywarn-adapted-args",
+      "-Ywarn-inaccessible",
+      "-Ywarn-nullary-override",
+      "-Ywarn-infer-any",
+      "-Ywarn-dead-code",
+      "-Ywarn-unused",
+      "-Ywarn-unused-import",
+      "-Ywarn-value-discard",
+      "-Ywarn-macros:after",
+      "-Ywarn-numeric-widen",
+      "-Ypartial-unification",
+      "-unchecked",
+      "-deprecation",
+      "-feature",
+      "-g:vars",
+      "-Xlint:_",
+      "-opt:l:inline",
+      "-opt-inline-from"
     )
   )
