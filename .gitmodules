@@ -1,0 +1,3 @@
+[submodule "lib/scalaz"]
+	path = lib/scalaz
+	url = git@github.com:scalaz/scalaz.git
