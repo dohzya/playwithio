@@ -1,84 +1,17 @@
 package playwithio
 
-import scala.concurrent.{Await, Future}
 import scalaz.effect.{IO, RTS, SafeApp}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scalaz.data.Disjunction
 import scalaz.data.Disjunction.{-\/, \/-}
 import scala.concurrent.duration._
+import scala.util.Random
 
 import lol.http.Client
 import lol.http.Get
 
 object Hello extends Greeting with SafeApp with RTS {
-
-  class DB[A] {
-    private var _items = Vector.empty[A]
-    def add(item: A): Unit = synchronized {
-      _items = _items :+ item
-    }
-    def find(predicate: A => Boolean): Seq[A] = synchronized {
-      _items.filter(predicate)
-    }
-  }
-
-  class DBFuture[A](db: DB[A]) {
-    def add(item: A): Future[Unit] = Future {
-      db.add(item)
-    }
-    def find(predicate: A => Boolean): Future[Seq[A]] = Future {
-      db.find(predicate)
-    }
-  }
-
-  def fooFuture(db: DBFuture[Int]): Future[Seq[Int]] = {
-    for {
-      _ <- db.add(1)
-      _ <- db.add(2)
-      els <- db.find(_ % 2 == 0)
-    } yield els
-  }
-
-  def await[A](fut: Future[A]): A = Await.result(fut, Duration.Inf)
-
-  def barFuture = {
-    val db = new DB[Int]
-    val dbFuture = new DBFuture(db)
-    val res: Future[Seq[Int]] = fooFuture(dbFuture)
-    println(await(res))
-    println(await(res))
-  }
-
-  class DBIO[A](db: DB[A]) {
-    def add(item: A): IO[Unit] = IO.sync {
-      db.add(item)
-    }
-    def find(predicate: A => Boolean): IO[Seq[A]] = IO.sync {
-      db.find(predicate)
-    }
-  }
-
-  def fooIO(db: DBIO[Int]): IO[Seq[Int]] = {
-    for {
-      _ <- db.add(1)
-      _ <- db.add(2)
-      els <- db.find(_ % 2 == 0)
-    } yield els
-  }
-
-  def barIO = {
-    val db = new DB[Int]
-    val dbIO = new DBIO(db)
-    val res: IO[Seq[Int]] = fooIO(dbIO)
-    println(unsafePerformIO(res))
-    println(unsafePerformIO(res))
-  }
-
-  //override def run(args: List[String]): IO[Unit] = for {
-  //  _ <- IO.sync { barIO }
-  //  _ <- IO.sync { println(3) }
-  //} yield ()
 
   case object Timeouted extends Exception("TIMEOUTED")
 
@@ -126,7 +59,7 @@ object Hello extends Greeting with SafeApp with RTS {
 
   def timeout[A](io: IO[A], dur: Duration, error: Throwable): IO[A] = {
     io.raceWith(IO.sleep(dur)) {
-      case -\/((a, fiber)) => fiber.interrupt(new Exception()).map(_ => a)
+      case -\/((a, fiber)) => fiber.interrupt(new Exception()).const(a)
       case \/-(((), fiber)) => fiber.interrupt(error).flatMap { _ => IO.fail(error) }
     }
   }
@@ -134,8 +67,8 @@ object Hello extends Greeting with SafeApp with RTS {
   override def run(args: List[String]): IO[Unit] =
     for {
       _ <- IO.sync { println(1) }
-      _ <- sleep(3.second, 3).timeout(1.second)
-      //_ <- timeout(sleep(3.second, 3), 1.second, Timeouted)
+      _ <- sleep(3.second, 3).timeout(1.second).catchAll(_ => IO.unit)
+      _ <- timeout(sleep(3.second, 3), 1.second, Timeouted).catchAll(_ => IO.unit)
     } yield ()
 
 
@@ -172,6 +105,7 @@ object Hello extends Greeting with SafeApp with RTS {
 
 trait Greeting {
 
-  lazy val getUrl: IO[String] = IO.point("http://dohzya.com")
+  //lazy val getUrl: IO[String] = IO.point("http://dohzya.com")
+  lazy val getUrl: IO[String] = IO.point("hello")
 
 }
