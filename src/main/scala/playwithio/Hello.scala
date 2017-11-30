@@ -1,17 +1,110 @@
 package playwithio
 
-import scalaz.effect.{IO, RTS, SafeApp}
+import scala.concurrent.Future
+import scalaz.effect.{Errors, IO, RTS, SafeApp}
 import scala.concurrent.ExecutionContext.Implicits.global
 import scala.concurrent.duration.Duration
 import scalaz.data.Disjunction
 import scalaz.data.Disjunction.{-\/, \/-}
 import scala.concurrent.duration._
 import scala.util.Random
+import scalaz.effect.Errors.TimeoutException
 
 import lol.http.Client
 import lol.http.Get
+import play.api.mvc._
 
-object Hello extends Greeting with SafeApp with RTS {
+object Hello extends Greeting with SafeApp {
+
+  IO.now(pureFn) // strict (or eager)
+  IO.point(pureFn) // lazy
+  IO.sync(impureFn())
+  IO.async[Int] { cb =>
+    new Thread(() => {
+      Thread.sleep(500)
+      cb(\/-(3))
+    }).start()
+  } // equivalent to next
+  IO.sleep(500.millis) // doesn't use a thread (ScheduledExecutorService.schedule)
+
+  IO.sleep(500.millis).flatMap(_ => ioFn()) // equivalent to next
+  ioFn().delay(500.millis)
+
+  for { // sequential calls
+    a <- getValueFromWS("http://google.com")
+    b <- fetchInDB(a)
+  } yield b
+
+  for { // parallel calls (NOT IN CATS)
+    fiber <- getValueFromWS("http://google.com").fork
+    b <- getValueFromWS("http://facebook.com")
+    a <- fiber.join
+  } yield (a, b)
+
+  ioFn().race(ioFn()) // return the fastest and kill the slowest (NOT IN CATS)
+
+  ioFn().timeout(500.millis) // kill the IO and return a failed IO (NOT IN CATS)
+
+  def doSomethingInMyBack(): Unit = {
+    // the println will be called
+    Future {
+      println("don't print me!")
+    }
+    ()
+  }
+  def doNothingInMyBack(): Unit = {
+    // the println won't be called
+    IO.sync {
+      println("don't print me!")
+    }
+    ()
+  }
+
+  openFile("data.json").bracket(closeFile) { file =>
+    for {
+      header <- readHeader(file)
+      // ...
+    } yield header
+  }
+
+  trait MyController extends BaseController with RTS {
+
+    def get(id: String) = TimeoutedAction(1.second) { req =>
+      for {
+        user <- fetchUser(id)
+      } yield Ok(user)
+    }
+
+    def TimeoutedAction[A](dur: Duration)(fn: Request[A] => IO[Result]) =
+      Action.async { req =>
+        val timeouted = fn(req).timeout(1.second).catchSome {
+          case t: TimeoutException =>
+            IO.point(Results.RequestTimeout)
+        }
+        // Can't create a future from a scalaz's IO, so this code will be blocking and consume a thread
+        Future { unsafePerformIO(timeouted) }
+        // With cats's IO, we would call io.unsafeToFuture()
+      }
+
+  }
+
+
+
+  // ---------------------------------------------------------------------------
+
+  def pureFn: Int = 3
+  def impureFn(): Int = Random.nextInt()
+  def ioFn(): IO[Int] = IO.sync(impureFn())
+
+  def getValueFromWS(url: String): IO[String] = IO.sync("")
+  def fetchInDB(content: String): IO[String] = IO.sync("")
+  case class File(path: String)
+  def openFile(path: String): IO[File] = IO.point(File(path))
+  def closeFile(file: File): IO[Unit] = IO.unit
+  def readHeader(file: File): IO[String] = IO.sync("")
+  def fetchUser(id: String): IO[String] = IO.sync("")
+
+
 
   case object Timeouted extends Exception("TIMEOUTED")
 
