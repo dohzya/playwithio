@@ -7,7 +7,7 @@ import org.scalatest._
 class HelloSpec extends FlatSpec with Matchers with RTS {
 
   "The Hello object" should "say hello" in {
-    unsafePerformIO { Hello.greeting } shouldEqual "hello"
+    unsafePerformIO { Hello.getUrl } shouldEqual "hello"
   }
 
 }

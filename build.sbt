@@ -11,6 +11,8 @@ lazy val root = (project in file(".")).
     libraryDependencies ++= Seq(
       "scalaz-base" %% "scalaz-base" % "0.1-SNAPSHOT",
       "scalaz-effect" %% "scalaz-effect" % "0.1-SNAPSHOT",
+      //"io.netty" % "netty-all" % "4.1.17.Final",
+      "com.criteo.lolhttp" %% "lolhttp" % "0.8.1",
       scalaTest % Test
     ),
     scalacOptions ++= Seq(
