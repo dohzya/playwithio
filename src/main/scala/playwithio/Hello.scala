@@ -81,8 +81,8 @@ object Hello extends Greeting with SafeApp {
   def readHeader(file: File): IO[String] = IO.sync("")
   def fetchUser(id: String): IO[String] = IO.sync(id)
 
-
-
+  def slowFetchUser(id: String): IO[String] = IO.sync(id).delay(2.seconds)
+  
   case object Timeouted extends Exception("TIMEOUTED")
 
   def sleep(dur: Duration, msg: Any) =
