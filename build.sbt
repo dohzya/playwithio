@@ -13,6 +13,7 @@ lazy val root = (project in file(".")).
       "scalaz-effect" %% "scalaz-effect" % "0.1-SNAPSHOT",
       "com.typesafe.play" %% "play" % "2.6.7",
       "com.criteo.lolhttp" %% "lolhttp" % "0.8.1",
+      "org.scalatestplus.play" %% "scalatestplus-play" % "3.1.2" % Test,
 
       scalaTest % Test
     ),

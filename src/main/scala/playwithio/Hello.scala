@@ -67,29 +67,6 @@ object Hello extends Greeting with SafeApp {
     } yield header
   }
 
-  trait MyController extends BaseController with RTS {
-
-    def get(id: String) = TimeoutedAction(1.second) { req =>
-      for {
-        user <- fetchUser(id)
-      } yield Ok(user)
-    }
-
-    def TimeoutedAction[A](dur: Duration)(fn: Request[A] => IO[Result]) =
-      Action.async { req =>
-        val timeouted = fn(req).timeout(1.second).catchSome {
-          case t: TimeoutException =>
-            IO.point(Results.RequestTimeout)
-        }
-        // Can't create a future from a scalaz's IO, so this code will be blocking and consume a thread
-        Future { unsafePerformIO(timeouted) }
-        // With cats's IO, we would call io.unsafeToFuture()
-      }
-
-  }
-
-
-
   // ---------------------------------------------------------------------------
 
   def pureFn: Int = 3
@@ -102,7 +79,7 @@ object Hello extends Greeting with SafeApp {
   def openFile(path: String): IO[File] = IO.point(File(path))
   def closeFile(file: File): IO[Unit] = IO.unit
   def readHeader(file: File): IO[String] = IO.sync("")
-  def fetchUser(id: String): IO[String] = IO.sync("")
+  def fetchUser(id: String): IO[String] = IO.sync(id)
 
 
 
